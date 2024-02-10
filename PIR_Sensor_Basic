@@ -1,0 +1,24 @@
+
+int led = 5; //Declare variable
+int sensor = 4; //Declare variable
+
+void setup() {
+  Serial.begin(115200); //Declare serial
+  Serial.println("Hello, ESP32!"); 
+  pinMode(led, OUTPUT); //Set pin5 as output
+  pinMode(sensor, INPUT); //Set pin4 as input
+}
+
+void loop() {
+ int state = digitalRead(sensor); //Assign the sensor status into integer variable
+  if (state == HIGH) {
+  digitalWrite (led, HIGH); // Turn-on LED
+  delay (1000); //Set delay
+  Serial.println ("Lights Open"); //Print output to console
+}
+else {
+digitalWrite (led, LOW); //Turn-off LED
+delay (1000); //Set delay
+Serial.println ("Lights Off"); // Print output to console
+ }
+}
