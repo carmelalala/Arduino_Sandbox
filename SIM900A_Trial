@@ -11,7 +11,7 @@ void setup()
   mySerial.begin(115200);
 Serial.println("Initializing...");
   delay(1000);
-mySerial.println("AT"); //Once the handshake test is successful, it will back to OK
+ mySerial.println("AT"); //Once the handshake test is successful, it will back to OK
   updateSerial();
   mySerial.println("AT+CSQ"); //Signal quality test, value range is 0-31 , 31 is the best
   updateSerial();
