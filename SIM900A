@@ -1,0 +1,104 @@
+/*
+ * ESP32 and GSM SIM900A module together for monitoring an Analog Sensor
+ * When the value is exceeded a message is sent along with the Sensor value, 
+ * This also sends the notification message to the Blynk application. 
+ * The Sensor value can also be monitored in real-time using a Gauge widget. 
+ * 
+ * Download Libraries:
+ * https://www.electroniclinic.com/arduino-libraries-download-and-projects-they-are-used-in-project-codes/
+ */
+#define BLYNK_PRINT Serial
+/* ESP32 & Blynk */
+#include <BlynkSimpleEsp32.h>
+#include <SimpleTimer.h>
+int VResistor = A0; // GPIO36
+int vrdata = 0;  
+int VRFlag = 0; 
+ 
+String textForSMS;
+
+
+char auth[] = "1FRxywOEJWaF0-WJWPec4YbwxR83pNAt";
+/* WiFi credentials */
+char ssid[] = "AndroidAP7DF8";
+char pass[] = "jamshaid";
+
+SimpleTimer timer;
+
+
+void setup() {
+
+
+ randomSeed(analogRead(0));
+ Serial.begin(9600); // original 19200. while enter 9600 for SerialA
+
+delay(5000); // wait for 5 seconds
+ Blynk.begin(auth, ssid, pass);
+timer.setInterval(1000L, Sensors);
+  
+}
+
+void loop() {
+
+  timer.run(); // Initiates SimpleTimer
+  Blynk.run(); 
+
+
+}
+
+
+void sendSMS(String message)
+{
+  Serial.print("AT+CMGF=1\r");                     // AT command to send SMS message
+  delay(200);
+ Serial.println("AT + CMGS = \"+923339218213\"");  // recipient's mobile number, in international format
+ 
+  delay(200);
+  Serial.println(message);                         // message to send
+  delay(200);
+  Serial.println((char)26);                        // End AT command with a ^Z, ASCII code 26
+  delay(200); 
+  Serial.println();
+  delay(100);                                     // give module time to send SMS
+  Blynk.begin(auth, ssid, pass);
+}
+
+void Sensors()
+{
+   vrdata = analogRead(VResistor);
+   vrdata = map(vrdata,0,4000,0,1023);
+    Blynk.virtualWrite(V2, vrdata);
+    
+  if ((vrdata > 500) && (VRFlag == 0)) 
+{
+textForSMS =  "\nValue Exceeded!!!\n"; 
+textForSMS = textForSMS + " Sensor Value: "; 
+textForSMS = textForSMS + vrdata; 
+textForSMS = textForSMS + "\n"; 
+Blynk.notify("Exceeded!!!");
+ 
+sendSMS(textForSMS);
+//Serial.println(textForSMS);
+//Serial.println("message sent."); 
+textForSMS = ""; 
+delay(200);
+VRFlag = 1; 
+}
+
+if ((vrdata < 500) && (VRFlag == 1)) 
+{
+textForSMS =  "\nValue Got Normal\n"; 
+textForSMS = textForSMS + " Sensor Value: "; 
+textForSMS = textForSMS + vrdata; 
+textForSMS = textForSMS + "\n"; 
+Blynk.notify("Got normal :)"); 
+sendSMS(textForSMS);
+//Serial.println(textForSMS);
+textForSMS = "";
+delay(200);
+VRFlag = 0; 
+}
+
+
+
+}
