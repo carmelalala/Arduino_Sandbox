@@ -1,13 +1,13 @@
 #include <SoftwareSerial.h>
 //Create software serial object to communicate with SIM900
-//mySerial(7,8) for UNo, mySerial(D5,D6) in NodeMCU
-SoftwareSerial mySerial(7,8);
+
+SoftwareSerial mySerial(D5,D6);
 void setup()
 {
-  //Begin serial communication with Arduino UNO/NodeMCU and Arduino IDE (Serial Monitor)
-  Serial.begin(9600);
+  //Begin serial communication with NodeMCU
+  Serial.begin(115200);
   
-  //Begin serial communication with Arduino and SIM900
+  //Begin serial communication with NodeMCU and SIM900A
   mySerial.begin(115200);
 Serial.println("Initializing...");
   delay(1000);
