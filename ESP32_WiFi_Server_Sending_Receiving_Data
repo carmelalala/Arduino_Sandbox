@@ -1,162 +1,237 @@
-/********************************************************************************
- * Sending data to a local Page
- *  => Temp/Hum from a DHT22 Sensor
- *  => Generic data from a analog input (potenciometer)
- * 
- * Receiving commands from a local page
- *  ==> Turning ON/OFF a LED
- * 
- * Based on original SimpleWiFiServer created for on Arduino 25 Nov 2012 by Tom Igoe
- * and ported for sparkfun esp32 on 31.01.2017 by Jan Hendrik Berlin
- * 
- * MJRoBot.org 9Sept17
- ********************************************************************************/
+#include <NTPClient.h>
+#include <ArduinoJson.h>
+#include <ESP8266WiFi.h>
 
-/* WiFi parameters and credentials */
-#include <WiFi.h>
-const char* ssid     = "YOUR SSID";
-const char* password = "YOUR PASSWORD";
-WiFiServer server(80);
+//const char* ssid = "hackymody00_2";//type your ssid
+//const char* password = "5dm1nm1cm1c";//type your password
 
-/* DHT Temperature and Humidity Sensor */
-#include "DHT.h"
-#define DHTPIN 23  
-#define DHTTYPE DHT22 
-DHT dht(DHTPIN, DHTTYPE);
-float localHum = 0;
-float localTemp = 0;
-
-/* LED */
-#define LED_PIN 2
-
-//Analog Input
-#define ANALOG_PIN_0 36
-int analog_value = 0;
-
-void setup()
-{
-  Serial.begin(115200);
-  pinMode(LED_PIN, OUTPUT); 
-  delay(10);
-
-  connectWiFi();
+const char* ssid = "MelaiDataCollectorModule";//type your ssid
+const char* password = "hehe12345";//type your password
  
-  dht.begin();
-}
+int ledPin = 2; // GPIO2 of ESP8266
 
-int value = 0;
+String message = "";
+bool messageReady = false;
 
-void loop()
-{
-  analog_value = analogRead(ANALOG_PIN_0);
-  getDHT();
-  WiFiLocalWebPageCtrl();
-}
+WiFiServer server(80);//Service Port
 
-/***************************************************
-* Get indoor Temp/Hum data
-****************************************************/
-void getDHT()
-{
-  float tempIni = localTemp;
-  float humIni = localHum;
-  localTemp = dht.readTemperature();
-  localHum = dht.readHumidity();
-  if (isnan(localHum) || isnan(localTemp))   // Check if any reads failed and exit early (to try again).
-  {
-    localTemp = tempIni;
-    localHum = humIni;
-    return;
-  }
-}
-
-/***************************************************
-* Send and receive data from Local Page
-****************************************************/
-void WiFiLocalWebPageCtrl(void)
-{
-  WiFiClient client = server.available();   // listen for incoming clients
-  //client = server.available();
-  if (client) {                             // if you get a client,
-    Serial.println("New Client.");           // print a message out the serial port
-    String currentLine = "";                // make a String to hold incoming data from the client
-    while (client.connected()) {            // loop while the client's connected
-      if (client.available()) {             // if there's bytes to read from the client,
-        char c = client.read();             // read a byte, then
-        Serial.write(c);                    // print it out the serial monitor
-        if (c == '\n') {                    // if the byte is a newline character
-
-          // if the current line is blank, you got two newline characters in a row.
-          // that's the end of the client HTTP request, so send a response:
-          if (currentLine.length() == 0) {
-            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-            // and a content-type so the client knows what's coming, then a blank line:
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-type:text/html");
-            client.println();
-
-            // the content of the HTTP response follows the header:
-            //WiFiLocalWebPageCtrl(); 
-              client.print("Temperature now is: ");
-              client.print(localTemp);
-              client.print("  oC<br>");
-              client.print("Humidity now is:     ");
-              client.print(localHum);
-              client.print(" % <br>");
-              client.print("<br>");
-              client.print("Analog Data:     ");
-              client.print(analog_value);
-              client.print("<br>");
-              client.print("<br>");
-              
-              client.print("Click <a href=\"/H\">here</a> to turn the LED on.<br>");
-              client.print("Click <a href=\"/L\">here</a> to turn the LED off.<br>");         
-
-            // The HTTP response ends with another blank line:
-            client.println();
-            // break out of the while loop:
-            break;
-          } else {    // if you got a newline, then clear currentLine:
-            currentLine = "";
-          }
-        } else if (c != '\r') {  // if you got anything else but a carriage return character,
-          currentLine += c;      // add it to the end of the currentLine
-        }
-
-        // Check to see if the client request was "GET /H" or "GET /L":
-        if (currentLine.endsWith("GET /H")) {
-          digitalWrite(LED_PIN, HIGH);               // GET /H turns the LED on
-        }
-        if (currentLine.endsWith("GET /L")) {
-          digitalWrite(LED_PIN, LOW);                // GET /L turns the LED off
-        }
-      }
-    }
-    // close the connection:
-    client.stop();
-    Serial.println("Client Disconnected.");
-  }
-}
-
-/***************************************************
-* Connecting to a WiFi network
-****************************************************/
-void connectWiFi(void)
-{
+void setup() {
+  Serial.begin(115200);
+  delay(10);
+ 
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
+   
+  // Connect to WiFi network
   Serial.println();
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) 
-  {
+   
+  //WiFi.begin(ssid, password);
+  WiFi.softAP(ssid, password);
+   
+  while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
   Serial.println("");
-  Serial.println("WiFi connected.");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-  
+  //Serial.println("WiFi connected");
+  Serial.println("Hotspot started");
+   
+  // Start the server
   server.begin();
+  Serial.println("Server started");
+ 
+  // Print the IP address
+  Serial.print("Use this URL to connect: ");
+  Serial.print("http://");
+ // Serial.print(WiFi.localIP());
+  Serial.print(WiFi.softAPIP());
+  Serial.println("/");
+}
+ 
+void loop() {
+ int relay;
+  int relay_status;
+
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+   
+  // Wait until the client sends some data
+  //Serial.println("new client");
+  while(!client.available()){
+    delay(1);
+  }
+   
+  // Read the first line of the request
+  String request = client.readStringUntil('\r');
+  //Serial.println(request);
+  client.flush();
+   
+  // Match the request
+ 
+  int value = LOW;
+  if (request.indexOf("/LED=ON") != -1) {
+    digitalWrite(ledPin, HIGH);
+    value = HIGH;
+  } 
+  if (request.indexOf("/LED=OFF") != -1){
+    digitalWrite(ledPin, LOW);
+    value = LOW;
+  }
+
+  if (request.indexOf("/R1=ON") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "8";
+    doc["status"] = "0";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+  if (request.indexOf("/R1=OFF") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "8";
+    doc["status"] = "1";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+  
+  if (request.indexOf("/R2=ON") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "9";
+    doc["status"] = "0";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+  if (request.indexOf("/R2=OFF") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "9";
+    doc["status"] = "1";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+
+  if (request.indexOf("/R3=ON") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "10";
+    doc["status"] = "0";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+  if (request.indexOf("/R3=OFF") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "10";
+    doc["status"] = "1";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+
+  if (request.indexOf("/R4=ON") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "11";
+    doc["status"] = "0";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+  
+  if (request.indexOf("/R4=OFF") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "11";
+    doc["status"] = "1";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+ 
+  //Set ledPin according to the request
+  //digitalWrite(ledPin, value);
+   
+  // Return the response
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-Type: text/html");
+  client.println(""); //  do not forget this one
+  client.println("<!DOCTYPE HTML>");
+  client.println("<html>");
+  client.println("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+  client.println("<head>");
+  client.println("<title>Arduino Relay Control Center</title>");
+  client.println("<script src=\"https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js\"></script>");
+  client.println("<style>body{display:flex; flex-direction:rows; background:url(\"https://i.imgur.com/OmfXzz9.png\") center no-repeat} .head-container{display:flex; flex-direction:row; height:auto; width:85%; margin:auto;} .switch { position: relative; display: inline-block; width: 60px;  height: 34px; } .switch input {display: none;} .slider {  position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; -webkit-transition: .4s; transition: .4s; }.slider:before { position: absolute;  content: \"\"; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; -webkit-transition: .4s; transition: .4s;} input:checked + .slider {  background-color: #2196F3; } input:focus + .slider { box-shadow: 0 0 1px #2196F3;}input:checked + .slider:before {-webkit-transform: translateX(26px); -ms-transform: translateX(26px); transform: translateX(26px);}.slider.round {border-radius: 34px; } .slider.round:before {border-radius: 50%; }.header-title{font-size:27px; font-family:'Segoe UI'; font-weight:700; margin:auto; text-align:center} .item-title{font-size:20px; font-family:'Segoe UI'; font-weight:600; margin:auto; text-align:center} .auto-general{margin:auto} .card{background-color:#fff; padding-bottom:50px; border-radius:20px; box-shadow: 3px 5px 20px 0px #888888; margin-top:10px} .header-main{display:flex; flex-direction:column; height:70px; width:100%;} .sw-container{display:flex; flex-direction:column; height:50px; width:100%;} .sw-container-subs{display:flex;  flex-direction:column; height:50px; width:100%; margin:50px auto auto auto}</style>");
+  client.println("</head>");
+  client.println("<body>");
+  client.println("<div class=\"head-container\">");
+  client.println("<div style=\"flex-direction:column; width:100%;\">");
+  client.println("<div class=\"card\">");
+  client.println("<div class=\"header-main\">");
+  client.println("<div class=\"header-title\">Arduino Relay Control Center</div>");
+  client.println("</div>");
+  client.println("<div class=\"sw-container\">");
+  client.println("<div style=\"display:flex; flex-direction:column; margin:auto;\" class=\"item-title\">Board Relay 1</div>");
+  client.println("<div class=\"auto-general\" style=\"margin-top:10px\"><label class=\"switch\"><input type=\"checkbox\" id=\"rel1\" onclick=\"getRelayOne()\"><div class=\"slider round\"></div></label></div></div>");
+  client.println("<div class=\"sw-container-subs\">");
+  client.println("<div style=\"display:flex; flex-direction:column;  margin:auto\" class=\"item-title\">Board Relay 2</div>");
+  client.println("<div class=\"auto-general\" style=\"margin-top:10px\"><label class=\"switch\"> <input type=\"checkbox\"  id=\"rel2\" onclick=\"getRelayTwo()\"> <div class=\"slider round\"></div></label></div></div>");
+  client.println("<div class=\"sw-container-subs\">");
+  client.println("<div style=\"display:flex; flex-direction:column;  margin:auto\" class=\"item-title\">Board Relay 3</div>");
+  client.println("<div class=\"auto-general\" style=\"margin-top:10px\"><label class=\"switch\"><input type=\"checkbox\"  id=\"rel3\" onclick=\"getRelayThree()\"><div class=\"slider round\"></div></label></div></div>");
+  client.println("<div class=\"sw-container-subs\">");
+  client.println("<div style=\"display:flex; flex-direction:column; margin:auto auto 1% auto\" class=\"item-title\">Board Relay 4</div>");
+  client.println("<div class=\"auto-general\" style=\"margin-top:10px\"><label class=\"switch\"><input type=\"checkbox\"  id=\"rel4\" onclick=\"getRelayFour()\"><div class=\"slider round\"></div></label></div></div>");
+  client.println("<div class=\"sw-container-subs\">");
+  client.println("<div style=\"display:flex; flex-direction:column; margin:auto\" class=\"item-title\">ESP8266 GPIO2 Pin LED</div>");
+  client.println("<div class=\"auto-general\" style=\"margin-top:10px\"><label class=\"switch\"><input type=\"checkbox\"  id=\"rel5\" onclick=\"getEsp()\"> <div class=\"slider round\"></div></label></div></div>");
+  client.println("</div></div></div></div>");
+  client.println("</body>");
+  client.println("<script type=\"text/javascript\">");
+  client.println("var xhr = new XMLHttpRequest();");
+  client.println("function getRelayOne(){");
+client.println("var cb = document.getElementById('rel1'); if(cb.checked==true){");
+client.println("xhr.open(\'GET\', \'/R1=ON\', true);xhr.send();");
+client.println("}else{");
+client.println("xhr.open(\'GET\', \'/R1=OFF\', true); } xhr.send();");
+client.println("}");
+client.println("function getRelayTwo(){");
+client.println("var cb = document.getElementById('rel2');");
+client.println("if(cb.checked==true){");
+client.println(" xhr.open(\'GET\', \'/R2=ON\', true);xhr.send();");
+client.println("}else{");
+client.println("xhr.open(\'GET\', \'/R2=OFF\', true);xhr.send();");
+client.println("}}");
+client.println(" function getRelayThree(){");
+client.println("var cb = document.getElementById('rel3');");
+client.println("if(cb.checked==true){");
+client.println("xhr.open(\'GET\', \'/R3=ON\', true);xhr.send();");
+client.println("}else{");
+client.println("xhr.open(\'GET\', \'/R3=OFF\', true);xhr.send();");
+client.println("}}");
+client.println(" function getRelayFour(){");
+client.println("var cb = document.getElementById('rel4');");
+client.println("if(cb.checked==true){");
+client.println("xhr.open(\'GET\', \'/R4=ON\', true);xhr.send();");
+client.println("}else{");
+client.println("xhr.open(\'GET\', \'/R4=OFF\', true);xhr.send();");
+client.println("}}");
+ client.println("function getEsp(){");
+client.println("var cb = document.getElementById('rel5');");
+client.println("if(cb.checked==true){");
+client.println("xhr.open(\'GET\', \'/LED=ON\', true);xhr.send();");
+client.println("}else{");
+client.println("xhr.open(\'GET\', \'/LED=OFF\', true);xhr.send();");
+client.println("}}");
+  client.println("</script>");
+  client.println("</html>");
+ 
+  delay(1);
+  //Serial.println("Client disconnected");
+  //Serial.println("");
 }
