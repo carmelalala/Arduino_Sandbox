@@ -1,0 +1,237 @@
+#include <NTPClient.h>
+#include <ArduinoJson.h>
+#include <ESP8266WiFi.h>
+
+//const char* ssid = "hackymody00_2";//type your ssid
+//const char* password = "5dm1nm1cm1c";//type your password
+
+const char* ssid = "MelaiDataCollectorModule";//type your ssid
+const char* password = "hehe12345";//type your password
+ 
+int ledPin = 2; // GPIO2 of ESP8266
+
+String message = "";
+bool messageReady = false;
+
+WiFiServer server(80);//Service Port
+
+void setup() {
+  Serial.begin(115200);
+  delay(10);
+ 
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
+   
+  // Connect to WiFi network
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+   
+  //WiFi.begin(ssid, password);
+  WiFi.softAP(ssid, password);
+   
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  //Serial.println("WiFi connected");
+  Serial.println("Hotspot started");
+   
+  // Start the server
+  server.begin();
+  Serial.println("Server started");
+ 
+  // Print the IP address
+  Serial.print("Use this URL to connect: ");
+  Serial.print("http://");
+ // Serial.print(WiFi.localIP());
+  Serial.print(WiFi.softAPIP());
+  Serial.println("/");
+}
+ 
+void loop() {
+ int relay;
+  int relay_status;
+
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+   
+  // Wait until the client sends some data
+  //Serial.println("new client");
+  while(!client.available()){
+    delay(1);
+  }
+   
+  // Read the first line of the request
+  String request = client.readStringUntil('\r');
+  //Serial.println(request);
+  client.flush();
+   
+  // Match the request
+ 
+  int value = LOW;
+  if (request.indexOf("/LED=ON") != -1) {
+    digitalWrite(ledPin, HIGH);
+    value = HIGH;
+  } 
+  if (request.indexOf("/LED=OFF") != -1){
+    digitalWrite(ledPin, LOW);
+    value = LOW;
+  }
+
+  if (request.indexOf("/R1=ON") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "8";
+    doc["status"] = "0";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+  if (request.indexOf("/R1=OFF") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "8";
+    doc["status"] = "1";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+  
+  if (request.indexOf("/R2=ON") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "9";
+    doc["status"] = "0";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+  if (request.indexOf("/R2=OFF") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "9";
+    doc["status"] = "1";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+
+  if (request.indexOf("/R3=ON") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "10";
+    doc["status"] = "0";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+  if (request.indexOf("/R3=OFF") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "10";
+    doc["status"] = "1";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+
+  if (request.indexOf("/R4=ON") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "11";
+    doc["status"] = "0";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+  
+  if (request.indexOf("/R4=OFF") != -1){
+    DynamicJsonDocument doc(1024);
+    doc["relay"] = "11";
+    doc["status"] = "1";
+    serializeJson(doc, Serial);
+    DeserializationError error = deserializeJson(doc,message);
+    message = Serial.readString();
+  }
+ 
+  //Set ledPin according to the request
+  //digitalWrite(ledPin, value);
+   
+  // Return the response
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-Type: text/html");
+  client.println(""); //  do not forget this one
+  client.println("<!DOCTYPE HTML>");
+  client.println("<html>");
+  client.println("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+  client.println("<head>");
+  client.println("<title>Arduino Relay Control Center</title>");
+  client.println("<script src=\"https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js\"></script>");
+  client.println("<style>body{display:flex; flex-direction:rows; background:url(\"https://i.imgur.com/OmfXzz9.png\") center no-repeat} .head-container{display:flex; flex-direction:row; height:auto; width:85%; margin:auto;} .switch { position: relative; display: inline-block; width: 60px;  height: 34px; } .switch input {display: none;} .slider {  position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; -webkit-transition: .4s; transition: .4s; }.slider:before { position: absolute;  content: \"\"; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; -webkit-transition: .4s; transition: .4s;} input:checked + .slider {  background-color: #2196F3; } input:focus + .slider { box-shadow: 0 0 1px #2196F3;}input:checked + .slider:before {-webkit-transform: translateX(26px); -ms-transform: translateX(26px); transform: translateX(26px);}.slider.round {border-radius: 34px; } .slider.round:before {border-radius: 50%; }.header-title{font-size:27px; font-family:'Segoe UI'; font-weight:700; margin:auto; text-align:center} .item-title{font-size:20px; font-family:'Segoe UI'; font-weight:600; margin:auto; text-align:center} .auto-general{margin:auto} .card{background-color:#fff; padding-bottom:50px; border-radius:20px; box-shadow: 3px 5px 20px 0px #888888; margin-top:10px} .header-main{display:flex; flex-direction:column; height:70px; width:100%;} .sw-container{display:flex; flex-direction:column; height:50px; width:100%;} .sw-container-subs{display:flex;  flex-direction:column; height:50px; width:100%; margin:50px auto auto auto}</style>");
+  client.println("</head>");
+  client.println("<body>");
+  client.println("<div class=\"head-container\">");
+  client.println("<div style=\"flex-direction:column; width:100%;\">");
+  client.println("<div class=\"card\">");
+  client.println("<div class=\"header-main\">");
+  client.println("<div class=\"header-title\">Arduino Relay Control Center</div>");
+  client.println("</div>");
+  client.println("<div class=\"sw-container\">");
+  client.println("<div style=\"display:flex; flex-direction:column; margin:auto;\" class=\"item-title\">Board Relay 1</div>");
+  client.println("<div class=\"auto-general\" style=\"margin-top:10px\"><label class=\"switch\"><input type=\"checkbox\" id=\"rel1\" onclick=\"getRelayOne()\"><div class=\"slider round\"></div></label></div></div>");
+  client.println("<div class=\"sw-container-subs\">");
+  client.println("<div style=\"display:flex; flex-direction:column;  margin:auto\" class=\"item-title\">Board Relay 2</div>");
+  client.println("<div class=\"auto-general\" style=\"margin-top:10px\"><label class=\"switch\"> <input type=\"checkbox\"  id=\"rel2\" onclick=\"getRelayTwo()\"> <div class=\"slider round\"></div></label></div></div>");
+  client.println("<div class=\"sw-container-subs\">");
+  client.println("<div style=\"display:flex; flex-direction:column;  margin:auto\" class=\"item-title\">Board Relay 3</div>");
+  client.println("<div class=\"auto-general\" style=\"margin-top:10px\"><label class=\"switch\"><input type=\"checkbox\"  id=\"rel3\" onclick=\"getRelayThree()\"><div class=\"slider round\"></div></label></div></div>");
+  client.println("<div class=\"sw-container-subs\">");
+  client.println("<div style=\"display:flex; flex-direction:column; margin:auto auto 1% auto\" class=\"item-title\">Board Relay 4</div>");
+  client.println("<div class=\"auto-general\" style=\"margin-top:10px\"><label class=\"switch\"><input type=\"checkbox\"  id=\"rel4\" onclick=\"getRelayFour()\"><div class=\"slider round\"></div></label></div></div>");
+  client.println("<div class=\"sw-container-subs\">");
+  client.println("<div style=\"display:flex; flex-direction:column; margin:auto\" class=\"item-title\">ESP8266 GPIO2 Pin LED</div>");
+  client.println("<div class=\"auto-general\" style=\"margin-top:10px\"><label class=\"switch\"><input type=\"checkbox\"  id=\"rel5\" onclick=\"getEsp()\"> <div class=\"slider round\"></div></label></div></div>");
+  client.println("</div></div></div></div>");
+  client.println("</body>");
+  client.println("<script type=\"text/javascript\">");
+  client.println("var xhr = new XMLHttpRequest();");
+  client.println("function getRelayOne(){");
+client.println("var cb = document.getElementById('rel1'); if(cb.checked==true){");
+client.println("xhr.open(\'GET\', \'/R1=ON\', true);xhr.send();");
+client.println("}else{");
+client.println("xhr.open(\'GET\', \'/R1=OFF\', true); } xhr.send();");
+client.println("}");
+client.println("function getRelayTwo(){");
+client.println("var cb = document.getElementById('rel2');");
+client.println("if(cb.checked==true){");
+client.println(" xhr.open(\'GET\', \'/R2=ON\', true);xhr.send();");
+client.println("}else{");
+client.println("xhr.open(\'GET\', \'/R2=OFF\', true);xhr.send();");
+client.println("}}");
+client.println(" function getRelayThree(){");
+client.println("var cb = document.getElementById('rel3');");
+client.println("if(cb.checked==true){");
+client.println("xhr.open(\'GET\', \'/R3=ON\', true);xhr.send();");
+client.println("}else{");
+client.println("xhr.open(\'GET\', \'/R3=OFF\', true);xhr.send();");
+client.println("}}");
+client.println(" function getRelayFour(){");
+client.println("var cb = document.getElementById('rel4');");
+client.println("if(cb.checked==true){");
+client.println("xhr.open(\'GET\', \'/R4=ON\', true);xhr.send();");
+client.println("}else{");
+client.println("xhr.open(\'GET\', \'/R4=OFF\', true);xhr.send();");
+client.println("}}");
+ client.println("function getEsp(){");
+client.println("var cb = document.getElementById('rel5');");
+client.println("if(cb.checked==true){");
+client.println("xhr.open(\'GET\', \'/LED=ON\', true);xhr.send();");
+client.println("}else{");
+client.println("xhr.open(\'GET\', \'/LED=OFF\', true);xhr.send();");
+client.println("}}");
+  client.println("</script>");
+  client.println("</html>");
+ 
+  delay(1);
+  //Serial.println("Client disconnected");
+  //Serial.println("");
+}
