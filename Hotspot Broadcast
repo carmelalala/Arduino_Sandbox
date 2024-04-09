@@ -1,0 +1,18 @@
+#include <ESP8266WiFi.h>
+
+const char *ssid = "WaterQualityTest"; // Name of the hotspot network
+const char *password = "password"; // Password for the hotspot network
+
+void setup() {
+  Serial.begin(115200);
+  delay(100);
+
+  WiFi.mode(WIFI_AP);   // Set the ESP8266 to AP mode
+
+
+  WiFi.softAP(ssid, password);   // Configure the hotspot network
+
+  Serial.println("Hotspot Network Created");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.softAPIP());
+}
