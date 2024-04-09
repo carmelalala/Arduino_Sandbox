@@ -1,15 +1,15 @@
-int sensorPin = A0;
+int sensorPin = A0; // turbidity sensor is connected to
 
 void setup()
 {  
-  Serial.begin(9600);
+  Serial.begin(9600);  //baud rate
 }
 
 void loop() {
-  int sensorValue = analogRead(sensorPin);
+  int sensorValue = analogRead(sensorPin); // reads raw data value from analog pin
 
   Serial.println("Turbidity:");
-  Serial.println(sensorValue);
+  Serial.println(sensorValue);  //print raw turbidity sensor value
   delay(100);
 
 }
